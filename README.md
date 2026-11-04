@@ -13,7 +13,7 @@ using Python, dbt and Tableau.
 Python 3.12 · PostgreSQL 16 · dbt Core · Apache Airflow (planned) · Tableau · Git/GitHub
 
 ## Project Status
-- [ ] Phase 1: Project foundation (in progress)
+- [x] Phase 1: Project foundation
 - [ ] Phase 2: Data discovery
 - [ ] Phase 3: Data ingestion
 - [ ] Phase 4: Data warehousing
