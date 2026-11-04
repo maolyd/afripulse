@@ -1,0 +1,38 @@
+# ============================================
+# AfriPulse .gitignore
+# Files and folders Git must NEVER track
+# ============================================
+
+# --- Secrets (passwords, API keys) ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv-*/
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# --- Data and logs (large or regenerable) ---
+data/landing/*
+!data/landing/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# --- dbt generated files ---
+dbt/**/target/
+dbt/**/dbt_packages/
+dbt/**/logs/
+
+# --- Tableau extracts (large binary files) ---
+*.hyper
+
+# --- macOS and editor files ---
+.DS_Store
+.vscode/
