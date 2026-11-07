@@ -1,0 +1,18 @@
+# Slowly Changing Dimension Type 2 for World Bank income groups (ADR 0002, decision 9).
+# The World Bank reclassifies countries every July (F14). Each `dbt snapshot`
+# (also run by `dbt build`) compares the current values with the last recorded
+# ones; when income_group_code or income_group_name changes, the old row is
+# closed (dbt_valid_to is set) and a new row opens. History is never overwritten.
+#
+# Limitation: history starts on the first snapshot run. Earlier classifications
+# would need the World Bank's historical classification file (out of scope).
+
+snapshots:
+  - name: snap_worldbank_country_income
+    relation: ref('stg_worldbank__countries')
+    description: Income group history per economy (Type 2). One row per economy per classification period.
+    config:
+      schema: snapshots
+      unique_key: country_iso3
+      strategy: check
+      check_cols: [income_group_code, income_group_name]

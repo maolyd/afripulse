@@ -67,3 +67,20 @@ models:
         data_tests: [unique, not_null]
       - name: merchant_id
         data_tests: [unique, not_null]
+
+  - name: dim_country_income_history
+    description: >
+      Type 2 slowly changing dimension: one row per country per income-group
+      period, from the snap_worldbank_country_income snapshot. is_current marks
+      the classification in force today.
+    columns:
+      - name: country_income_key
+        data_tests: [unique, not_null]
+      - name: country_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: country_key
+      - name: valid_from
+        data_tests: [not_null]

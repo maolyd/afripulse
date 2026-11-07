@@ -11,7 +11,7 @@ DBT := cd $(DBT_DIR) && set -a && . ../../.env && set +a && ../../.venv/bin/dbt
 
 .DEFAULT_GOAL := help
 .PHONY: help db-setup format lint test test-unit coverage ingest ingest-force check \
-	dbt-debug dbt-build dbt-freshness dbt-docs pipeline
+	dbt-debug dbt-build dbt-full-refresh dbt-freshness dbt-docs pipeline
 
 help: ## List available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -52,6 +52,9 @@ dbt-debug: ## Check dbt can connect to the database
 dbt-build: ## Build and test every dbt model (staging -> intermediate -> marts)
 	$(DBT) build
 
+dbt-full-refresh: ## Rebuild every model from scratch (after changing an incremental model's logic)
+	$(DBT) build --full-refresh
+
 dbt-freshness: ## Warn if any raw source has not been ingested recently
 	$(DBT) source freshness
 
@@ -59,4 +62,4 @@ dbt-docs: ## Generate the dbt documentation site and open it (Ctrl+C to stop)
 	$(DBT) docs generate
 	$(DBT) docs serve --port 8080
 
-pipeline: ingest dbt-build ## Full pipeline: ingest every source, then build and test the warehouse
+pipeline: ingest dbt-freshness dbt-build ## Full pipeline: ingest, check freshness, then build and test the warehouse
