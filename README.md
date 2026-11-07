@@ -14,7 +14,7 @@ Python 3.12 · PostgreSQL 16 · dbt Core · Apache Airflow (planned) · Tableau 
 
 ## Project Status
 - [x] Phase 1: Project foundation
-- [ ] Phase 2: Data discovery
+- [x] Phase 2: Data discovery
 - [ ] Phase 3: Data ingestion
 - [ ] Phase 4: Data warehousing
 - [ ] Phase 5: dbt transformation
