@@ -43,7 +43,7 @@ sources:
     start_year: 2000
     raw_table: raw.worldbank_indicator_values
     natural_key: [indicator_code, country_iso3, year]
-    incremental: source_last_updated   # skip reload if 'lastupdated' unchanged (F12)
+    incremental: row_hash             # loader skips unchanged rows (F12)
     findings: docs/discovery/worldbank_findings.md
     indicators:
       - code: SP.POP.TOTL
@@ -57,6 +57,7 @@ sources:
         name: GDP growth (annual %)
       - code: FP.CPI.TOTL.ZG
         name: Inflation, consumer prices (annual %)
+        upstream_source: IMF International Financial Statistics
       - code: SP.URB.TOTL.IN.ZS
         name: Urban population (% of total population)
       - code: IT.NET.USER.ZS
@@ -79,10 +80,10 @@ sources:
     base_url: https://www.imf.org/external/datamapper/api/v1
     user_agent: client_default        # custom User-Agents are blocked by the CDN (F-IMF-1)
     licence: IMF Copyright and Usage terms (to confirm)
-    release: WEO-2026-10
+    release: WEO-2026-10              # informational; the job detects the live release
     raw_table: raw.imf_weo_values
     natural_key: [release, indicator_code, area_code, year]
-    incremental: new_release
+    incremental: new_release          # skipped if this release was already loaded
     projection_rule: year_gte_release_year   # provisional (F-IMF-5)
     findings: docs/discovery/imf_findings.md
     indicators:
@@ -100,11 +101,14 @@ sources:
     landing_path: data/landing/manual/un_wpp/WPP2024_Demographic_Indicators_Medium.csv
     licence: CC BY 3.0 IGO (to confirm)
     release: WPP2024
-    read_options:
-      keep_default_na: false          # keeps Namibia's ISO2 "NA" (F-UN-3)
+    country_column: ISO3_code         # rows without an in-scope code are dropped (F-UN-4)
+    key_columns:                      # raw column: source column
+      loc_id: LocID
+      year: Time
+    integer_keys: [loc_id, year]
     raw_table: raw.un_wpp_demographic_indicators
-    natural_key: [release, LocID, Time]
-    incremental: file_checksum
+    natural_key: [release, loc_id, year]
+    incremental: file_checksum        # skipped if this exact file was already loaded
     units:
       population_and_counts: thousands   # F-UN-1
     projection_start_year: 2024         # F-UN-10
@@ -123,9 +127,15 @@ sources:
       sheet_name: Data                # first sheet is notes (F-FX-1)
       header_row: 0
       skip_rows: [1]                  # second header row holds labels (F-FX-2)
-      keep_default_na: false
+    country_column: codewb
+    key_columns:                      # raw column: source column
+      codewb: codewb
+      year: year
+      demographic_group: group        # "group" is an SQL keyword, so renamed
+      demographic_subgroup: group2
+    integer_keys: [year]
     raw_table: raw.findex_values
-    natural_key: [release, codewb, year, group, group2]
+    natural_key: [release, codewb, year, demographic_group, demographic_subgroup]
     incremental: file_checksum
     value_scale: fraction             # 0-1, not percent (F-FX-3)
     findings: docs/discovery/findex_findings.md

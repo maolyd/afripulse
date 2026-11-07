@@ -131,3 +131,13 @@ def release_already_loaded(engine: Engine, source_id: str, release: str) -> bool
     )
     with engine.connect() as conn:
         return conn.execute(query, {"source_id": source_id, "release": release}).scalar_one()
+
+
+def checksum_already_loaded(engine: Engine, source_id: str, checksum: str) -> bool:
+    """True if a previous run of `source_id` successfully loaded a file with this checksum."""
+    query = text(
+        "SELECT EXISTS (SELECT 1 FROM audit.ingestion_runs "
+        "WHERE source_id = :source_id AND source_checksum = :checksum AND status = 'success')"
+    )
+    with engine.connect() as conn:
+        return conn.execute(query, {"source_id": source_id, "checksum": checksum}).scalar_one()

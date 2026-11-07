@@ -11,13 +11,20 @@ so `force` only changes behaviour for release-based sources such as the IMF.
 
 import logging
 from collections.abc import Callable, Sequence
+from functools import partial
 from typing import Any
 
 from sqlalchemy import Engine
 
-from afripulse.db.audit import release_already_loaded, track_ingestion_run
+from afripulse.config import PROJECT_ROOT
+from afripulse.db.audit import (
+    checksum_already_loaded,
+    release_already_loaded,
+    track_ingestion_run,
+)
 from afripulse.db.loader import upsert_records
 from afripulse.ingestion.base import ExtractResult
+from afripulse.ingestion.extractors.files import FileExtractor
 from afripulse.ingestion.extractors.imf import IMFExtractor
 from afripulse.ingestion.extractors.worldbank import WorldBankExtractor
 from afripulse.ingestion.http_client import HttpClient
@@ -102,9 +109,42 @@ def run_imf_weo(
         _load(engine, source, result, run)
 
 
+def run_file_source(
+    engine: Engine,
+    client: HttpClient | None = None,
+    source_id: str = "",
+    source: dict[str, Any] | None = None,
+    country_codes: Sequence[str] | None = None,
+    force: bool = False,
+) -> None:
+    """Load a downloaded CSV/Excel file, unless this exact file was already loaded.
+
+    `client` is unused (files need no HTTP) but accepted so every job has the
+    same call signature.
+    """
+    source = source or get_source(source_id)
+    country_codes = country_codes or load_country_codes()
+    hint = f" from {source['download_page']}" if source.get("download_page") else ""
+
+    with track_ingestion_run(engine, source_id) as run:
+        extractor = FileExtractor(PROJECT_ROOT / source["landing_path"], source, hint)
+        run.source_checksum = extractor.checksum()
+        run.source_release = source["release"]
+
+        if not force and checksum_already_loaded(engine, source_id, run.source_checksum):
+            logger.info("%s: file unchanged since last load, skipping", source_id)
+            run.status = "skipped"
+            return
+
+        result = extractor.extract(country_codes, source["release"])
+        _load(engine, source, result, run)
+
+
 # Source id -> job. New sources are added here as their extractors are built.
 JOBS: dict[str, Callable[..., None]] = {
     "worldbank_countries": run_worldbank_countries,
     "worldbank_wdi": run_worldbank_wdi,
     "imf_weo": run_imf_weo,
+    "un_wpp": partial(run_file_source, source_id="un_wpp"),
+    "findex": partial(run_file_source, source_id="findex"),
 }
