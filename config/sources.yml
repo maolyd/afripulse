@@ -1,0 +1,140 @@
+# =====================================================================
+# AfriPulse source registry
+# One entry per data source. Read by the ingestion framework (Phase 3).
+# Every value here is backed by a discovery finding in docs/discovery/.
+# =====================================================================
+
+version: 1
+
+reference:
+  # The single definition of "Africa" (ADR 0001). All sources are filtered to it.
+  countries_file: data/reference/african_countries.csv
+
+defaults:
+  http:
+    timeout_seconds: 30
+    max_retries: 4
+    backoff_base_seconds: 2          # waits 2s, 4s, 8s, 16s
+    retry_on_status: [429, 500, 502, 503, 504]
+    never_retry_status: [400, 401, 403, 404]   # retrying will not help (F-IMF-1)
+
+sources:
+
+  worldbank_countries:
+    enabled: true
+    connector: worldbank_api
+    description: World Bank country metadata (region, income group, coordinates)
+    base_url: https://api.worldbank.org/v2
+    endpoint: country
+    licence: CC BY 4.0
+    page_size: 400
+    raw_table: raw.worldbank_countries
+    natural_key: [id]
+    incremental: full_refresh       # small and slowly changing; snapshot in dbt (F14)
+    findings: docs/discovery/worldbank_findings.md
+
+  worldbank_wdi:
+    enabled: true
+    connector: worldbank_api
+    description: World Development Indicators, annual values for African countries
+    base_url: https://api.worldbank.org/v2
+    licence: CC BY 4.0
+    page_size: 1000
+    start_year: 2000
+    raw_table: raw.worldbank_indicator_values
+    natural_key: [indicator_code, countryiso3code, date]
+    incremental: source_last_updated   # skip reload if 'lastupdated' unchanged (F12)
+    findings: docs/discovery/worldbank_findings.md
+    indicators:
+      - code: SP.POP.TOTL
+        name: Population, total
+        upstream_source: UN World Population Prospects (F-UN-2)
+      - code: NY.GDP.MKTP.CD
+        name: GDP (current US$)
+      - code: NY.GDP.PCAP.CD
+        name: GDP per capita (current US$)
+      - code: NY.GDP.MKTP.KD.ZG
+        name: GDP growth (annual %)
+      - code: FP.CPI.TOTL.ZG
+        name: Inflation, consumer prices (annual %)
+      - code: SP.URB.TOTL.IN.ZS
+        name: Urban population (% of total population)
+      - code: IT.NET.USER.ZS
+        name: Individuals using the Internet (% of population)
+        upstream_source: ITU
+      - code: IT.CEL.SETS.P2
+        name: Mobile cellular subscriptions (per 100 people)
+        upstream_source: ITU
+      - code: IT.NET.BBND.P2
+        name: Fixed broadband subscriptions (per 100 people)
+        upstream_source: ITU
+      - code: FX.OWN.TOTL.ZS
+        name: Account ownership (% of population ages 15+)
+        upstream_source: Global Findex (F7)
+
+  imf_weo:
+    enabled: true
+    connector: imf_datamapper_api
+    description: IMF World Economic Outlook, actuals and projections
+    base_url: https://www.imf.org/external/datamapper/api/v1
+    user_agent: client_default        # custom User-Agents are blocked by the CDN (F-IMF-1)
+    licence: IMF Copyright and Usage terms (to confirm)
+    release: WEO-2026-10
+    raw_table: raw.imf_weo_values
+    natural_key: [release, indicator_code, area_code, year]
+    incremental: new_release
+    projection_rule: year_gte_release_year   # provisional (F-IMF-5)
+    findings: docs/discovery/imf_findings.md
+    indicators:
+      - code: NGDP_RPCH
+        name: Real GDP growth (annual % change)
+      - code: PCPIPCH
+        name: Inflation, average consumer prices (annual % change)
+
+  un_wpp:
+    enabled: true
+    connector: csv_file
+    description: UN World Population Prospects, demographic indicators (Medium variant)
+    acquisition: manual_download
+    download_page: https://population.un.org/wpp/downloads
+    landing_path: data/landing/manual/un_wpp/WPP2024_Demographic_Indicators_Medium.csv
+    licence: CC BY 3.0 IGO (to confirm)
+    release: WPP2024
+    read_options:
+      keep_default_na: false          # keeps Namibia's ISO2 "NA" (F-UN-3)
+    raw_table: raw.un_wpp_demographic_indicators
+    natural_key: [release, LocID, Time]
+    incremental: file_checksum
+    units:
+      population_and_counts: thousands   # F-UN-1
+    projection_start_year: 2024         # F-UN-10
+    findings: docs/discovery/un_wpp_findings.md
+
+  findex:
+    enabled: true
+    connector: excel_file
+    description: World Bank Global Findex Database 2025 (survey waves 2011-2024)
+    acquisition: manual_download
+    download_page: https://www.worldbank.org/en/publication/globalfindex
+    landing_path: data/landing/manual/findex/GlobalFindexDatabase2025.xlsx
+    licence: CC BY 4.0 (to confirm)
+    release: FINDEX2025
+    read_options:
+      sheet_name: Data                # first sheet is notes (F-FX-1)
+      header_row: 0
+      skip_rows: [1]                  # second header row holds labels (F-FX-2)
+      keep_default_na: false
+    raw_table: raw.findex_values
+    natural_key: [release, codewb, year, group, group2]
+    incremental: file_checksum
+    value_scale: fraction             # 0-1, not percent (F-FX-3)
+    findings: docs/discovery/findex_findings.md
+    indicators:
+      - code: account.t.d
+        name: Account (% age 15+)
+      - code: fiaccount.t.d
+        name: Financial institution account (% age 15+)
+      - code: mobileaccount.t.d
+        name: Mobile money account (% age 15+)
+      - code: borrow.any.t.d
+        name: Borrowed any money (% age 15+)
