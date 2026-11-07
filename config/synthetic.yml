@@ -1,0 +1,37 @@
+# =====================================================================
+# AfriPulse synthetic data generator settings
+# Everything generated from this file is SYNTHETIC: it is calibrated to real
+# statistics but describes no real person, merchant or transaction.
+# Same settings + same calibration = byte-for-byte identical data.
+# =====================================================================
+
+seed: 20261107                 # change it to get a different (but equally realistic) dataset
+generator_version: 1           # bump when the generation logic changes
+
+period:
+  start: 2024-01-01
+  end: 2025-12-31
+
+# Focus markets: a mix of mobile-money leaders and card/cash economies.
+countries: [KEN, NGA, GHA, ZAF, EGY, SEN, UGA, TZA]
+
+customers: 5000                # shared across countries in proportion to population
+min_customers_per_country: 250 # so smaller markets still have enough data
+
+merchants_per_1000_customers: 60
+retail_txns_per_customer_month: 2.0
+mobile_money_txns_per_user_month: 4.0
+failed_mobile_money_rate: 0.02 # share of mobile money transactions that fail
+
+loyalty:
+  membership_rate: 0.6         # share of customers enrolled in the programme
+  points_per_usd: 10
+  redeem_threshold: 500        # points needed for one reward
+  redeem_probability: 0.35     # chance a member redeems once eligible
+
+# Used only when a real statistic is missing from the warehouse.
+calibration_defaults:
+  population: 20000000
+  gdp_per_capita_usd: 2000
+  mobile_money_share: 0.30
+  fi_account_share: 0.40

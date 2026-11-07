@@ -11,6 +11,8 @@ World Bank jobs always compare row by row (the loader skips unchanged rows),
 so `force` only changes behaviour for release-based sources such as the IMF.
 """
 
+import hashlib
+import json
 import logging
 from collections.abc import Callable, Sequence
 from functools import partial
@@ -31,6 +33,11 @@ from afripulse.ingestion.extractors.imf import IMFExtractor
 from afripulse.ingestion.extractors.worldbank import WorldBankExtractor
 from afripulse.ingestion.http_client import HttpClient
 from afripulse.sources_config import get_source, load_country_codes
+from afripulse.synthetic.calibration import load_calibration
+from afripulse.synthetic.generators import generate_dataset
+from afripulse.synthetic.invariants import find_invariant_violations
+from afripulse.synthetic.load import replace_synthetic_data
+from afripulse.synthetic.settings import SyntheticSettings, load_synthetic_settings
 from afripulse.validation.checks import DataValidationError, validate_records
 from afripulse.validation.store import previous_row_count, save_validation_report
 
@@ -162,6 +169,52 @@ def run_file_source(
         _load(engine, source, result, run, country_codes)
 
 
+def synthetic_fingerprint(settings: SyntheticSettings, calibration) -> str:
+    """SHA-256 of everything that determines the output: settings + calibration.
+
+    Same fingerprint => the generator would produce identical data, so skip.
+    """
+    inputs = {
+        "settings": settings.raw,
+        "calibration": {
+            iso3: {metric: v.value for metric, v in metrics.items()}
+            for iso3, metrics in sorted(calibration.items())
+        },
+    }
+    canonical = json.dumps(inputs, sort_keys=True, default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def run_synthetic(
+    engine: Engine,
+    client: HttpClient | None = None,
+    source_id: str = "synthetic",
+    settings: SyntheticSettings | None = None,
+    force: bool = False,
+    table_prefix: str = "",
+) -> None:
+    """Generate the synthetic dataset from real calibration and load it into raw_synthetic."""
+    settings = settings or load_synthetic_settings()
+    with track_ingestion_run(engine, source_id) as run:
+        calibration = load_calibration(engine, settings.countries, settings.calibration_defaults)
+        run.source_checksum = synthetic_fingerprint(settings, calibration)
+        run.source_release = f"seed={settings.seed} v{settings.generator_version}"
+
+        if not force and checksum_already_loaded(engine, source_id, run.source_checksum):
+            logger.info("Synthetic inputs unchanged since last run, skipping")
+            run.status = "skipped"
+            return
+
+        data = generate_dataset(settings, calibration)
+        run.rows_extracted = sum(len(df) for df in data.tables().values())
+        problems = find_invariant_violations(data, settings.start, settings.end)
+        if problems:
+            raise DataValidationError("Synthetic data broke invariants: " + "; ".join(problems))
+        run.rows_loaded = replace_synthetic_data(
+            engine, data, calibration, run.run_id, table_prefix
+        )
+
+
 # Source id -> job. New sources are added here as their extractors are built.
 JOBS: dict[str, Callable[..., None]] = {
     "worldbank_countries": run_worldbank_countries,
@@ -169,4 +222,5 @@ JOBS: dict[str, Callable[..., None]] = {
     "imf_weo": run_imf_weo,
     "un_wpp": partial(run_file_source, source_id="un_wpp"),
     "findex": partial(run_file_source, source_id="findex"),
+    "synthetic": run_synthetic,  # last: it is calibrated from the sources above
 }

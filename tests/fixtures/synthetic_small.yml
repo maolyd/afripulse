@@ -1,0 +1,23 @@
+# Small, fast synthetic settings used only by tests.
+seed: 42
+generator_version: 1
+period:
+  start: 2025-01-01
+  end: 2025-03-31
+countries: [KEN, EGY]
+customers: 400
+min_customers_per_country: 100
+merchants_per_1000_customers: 60
+retail_txns_per_customer_month: 3.0
+mobile_money_txns_per_user_month: 4.0
+failed_mobile_money_rate: 0.02
+loyalty:
+  membership_rate: 0.6
+  points_per_usd: 10
+  redeem_threshold: 200
+  redeem_probability: 0.5
+calibration_defaults:
+  population: 1
+  gdp_per_capita_usd: 1
+  mobile_money_share: 0.3
+  fi_account_share: 0.4
