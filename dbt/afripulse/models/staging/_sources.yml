@@ -1,0 +1,35 @@
+version: 2
+
+# Every raw table loaded by the Python ingestion framework (Phase 3).
+# Freshness: warn if a source has not been ingested for a week, error after a month.
+
+sources:
+  - name: raw
+    description: Real public data, stored exactly as received (payload JSONB) with lineage columns.
+    schema: raw
+    loaded_at_field: _ingested_at
+    freshness:
+      warn_after: {count: 7, period: day}
+      error_after: {count: 30, period: day}
+    tables:
+      - name: worldbank_countries
+        description: World Bank /country endpoint. Includes aggregates (F1).
+      - name: worldbank_indicator_values
+        description: World Bank WDI values, one row per indicator x country x year. Nulls kept (F11).
+      - name: imf_weo_values
+        description: IMF World Economic Outlook values per release, including projections.
+      - name: un_wpp_demographic_indicators
+        description: UN WPP 2024 rows for African countries. Counts in thousands (F-UN-1).
+      - name: findex_values
+        description: Global Findex 2025 rows for African countries. Values are fractions 0-1 (F-FX-3).
+
+  - name: raw_synthetic
+    description: SYNTHETIC generated data, calibrated to real statistics. Never real observations.
+    schema: raw_synthetic
+    tables:
+      - name: calibration
+      - name: customers
+      - name: merchants
+      - name: retail_transactions
+      - name: mobile_money_transactions
+      - name: loyalty_events

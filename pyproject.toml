@@ -37,6 +37,11 @@ dev = [
     "ruff>=0.6",
 ]
 
+transform = [
+    "dbt-core>=1.11,<1.12",
+    "dbt-postgres>=1.11,<1.12",
+]
+
 # Tell setuptools our code lives in src/
 [tool.setuptools.packages.find]
 where = ["src"]

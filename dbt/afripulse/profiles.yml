@@ -1,0 +1,14 @@
+# Connection settings. No secrets here: values come from environment variables
+# (loaded from the project's .env by the Makefile), so this file is safe in Git.
+afripulse:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('AFRIPULSE_DB_HOST', 'localhost') }}"
+      port: "{{ env_var('AFRIPULSE_DB_PORT', '5432') | as_number }}"
+      dbname: "{{ env_var('AFRIPULSE_DB_NAME', 'afripulse') }}"
+      user: "{{ env_var('AFRIPULSE_DBT_USER', 'afripulse_dbt') }}"
+      password: "{{ env_var('AFRIPULSE_DBT_PASSWORD') }}"
+      schema: staging            # default schema; models choose their own
+      threads: 4

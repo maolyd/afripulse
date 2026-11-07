@@ -1,0 +1,36 @@
+# =====================================================================
+# AfriPulse dbt project
+# Transforms raw (as-received) data into tested, documented marts:
+#   staging       one model per source table: rename, cast, trim, convert units
+#   intermediate  combine and conform sources
+#   marts         star schema for Tableau (facts and dimensions)
+# =====================================================================
+
+name: afripulse
+version: "0.5.0"
+config-version: 2
+profile: afripulse
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+clean-targets: ["target", "dbt_packages"]
+
+flags:
+  send_anonymous_usage_stats: false
+
+models:
+  afripulse:
+    staging:
+      +schema: staging
+      +materialized: view        # cheap: always reflects the latest raw data
+    intermediate:
+      +schema: intermediate
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table       # fast for Tableau
+      +grants:
+        select: ["afripulse_reader"]

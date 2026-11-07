@@ -4,8 +4,14 @@
 PY := .venv/bin/python
 CLI := $(PY) -m afripulse.orchestration.cli
 
+# dbt runs inside its project folder, with the variables from .env loaded
+# (dbt does not read .env itself). profiles.yml in that folder is found automatically.
+DBT_DIR := dbt/afripulse
+DBT := cd $(DBT_DIR) && set -a && . ../../.env && set +a && ../../.venv/bin/dbt
+
 .DEFAULT_GOAL := help
-.PHONY: help db-setup format lint test test-unit coverage ingest ingest-force check
+.PHONY: help db-setup format lint test test-unit coverage ingest ingest-force check \
+	dbt-debug dbt-build dbt-freshness dbt-docs pipeline
 
 help: ## List available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -39,3 +45,18 @@ ingest-force: ## Reload every source even if unchanged
 	$(CLI) ingest --force
 
 check: lint test ## Lint + tests: run before every commit
+
+dbt-debug: ## Check dbt can connect to the database
+	$(DBT) debug
+
+dbt-build: ## Build and test every dbt model (staging -> intermediate -> marts)
+	$(DBT) build
+
+dbt-freshness: ## Warn if any raw source has not been ingested recently
+	$(DBT) source freshness
+
+dbt-docs: ## Generate the dbt documentation site and open it (Ctrl+C to stop)
+	$(DBT) docs generate
+	$(DBT) docs serve --port 8080
+
+pipeline: ingest dbt-build ## Full pipeline: ingest every source, then build and test the warehouse

@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: stg_worldbank__countries
+    description: >
+      World Bank economies and aggregates, one row per code, with text trimmed
+      (F3) and coordinates cast to numbers (F6). Aggregates are flagged with
+      is_aggregate rather than removed, so staging stays a faithful 1:1 view of raw.
+    columns:
+      - name: country_iso3
+        description: Three-character World Bank code (ISO 3166-1 alpha-3 for economies).
+        data_tests:
+          - unique
+          - not_null
+      - name: country_iso2
+        description: Two-character code. Namibia's "NA" must survive as text (F-UN-3).
+      - name: wb_region_name
+        description: World Bank region, trimmed (the raw value has a trailing space, F3).
+      - name: income_group_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["HIC", "UMC", "LMC", "LIC", "INX"]
+              config:
+                where: "not is_aggregate"
+      - name: is_aggregate
+        description: True for regional and income-group aggregates such as "Africa" (F1).
+        data_tests:
+          - not_null
