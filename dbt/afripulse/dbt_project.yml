@@ -31,7 +31,7 @@ vars:
 # Tableau's read-only role may use the marts schema (table SELECT grants are
 # set per model below; schema USAGE is granted here, after every run).
 on-run-end:
-  - "{% for schema in schemas %}{% if schema == 'marts' %}grant usage on schema marts to afripulse_reader;{% endif %}{% endfor %}"
+  - "{% for schema in schemas %}{% if schema in ['marts', 'reporting'] %}grant usage on schema {{ schema }} to afripulse_reader;{% endif %}{% endfor %}"
 
 seeds:
   afripulse:
@@ -56,5 +56,10 @@ models:
     marts:
       +schema: marts
       +materialized: table       # fast for Tableau
+      +grants:
+        select: ["afripulse_reader"]
+    reporting:
+      +schema: reporting
+      +materialized: table       # flat, dashboard-ready extracts for Tableau Public
       +grants:
         select: ["afripulse_reader"]

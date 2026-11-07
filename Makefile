@@ -30,7 +30,7 @@ AIRFLOW := export AIRFLOW_HOME="$(CURDIR)/airflow" AIRFLOW__CORE__LOAD_EXAMPLES=
 .PHONY: help db-setup format lint test test-unit coverage ingest ingest-force check \
 	dbt-debug dbt-build dbt-full-refresh dbt-freshness dbt-docs pipeline \
 	airflow-install airflow-init airflow-start airflow-password airflow-test \
-	quality-report
+	quality-report export-tableau
 
 help: ## List available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-14s %s\n", $$1, $$2}'
@@ -83,6 +83,9 @@ dbt-docs: ## Generate the dbt documentation site and open it (Ctrl+C to stop)
 
 quality-report: ## Data quality report (GREEN / AMBER / RED) in reports/data_quality/latest.md
 	$(CLI) quality-report
+
+export-tableau: ## Export dashboard-ready CSVs to exports/tableau/ for Tableau Public
+	$(CLI) export-tableau
 
 pipeline: ingest dbt-freshness dbt-build quality-report ## Full pipeline: ingest, freshness, dbt build, quality report
 

@@ -5,6 +5,7 @@ Examples:
     python -m afripulse.orchestration.cli ingest worldbank_wdi   # one source
     python -m afripulse.orchestration.cli ingest imf_weo --force # reload even if unchanged
     python -m afripulse.orchestration.cli quality-report         # GREEN / AMBER / RED report
+    python -m afripulse.orchestration.cli export-tableau         # CSV extracts for Tableau
 
 Exit code 0 means success; 1 means a source failed (ingest) or the data quality
 status is RED (quality-report), so schedulers such as Airflow mark the task failed.
@@ -37,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help="reload even if the source release is unchanged"
     )
     commands.add_parser("quality-report", help="build the data quality report (exit 1 if RED)")
+    commands.add_parser("export-tableau", help="export reporting tables to CSV for Tableau Public")
     return parser
 
 
@@ -82,6 +84,20 @@ def run_quality_report() -> int:
     return 1 if report.status == "RED" else 0
 
 
+def run_export_tableau() -> int:
+    from afripulse.reporting.export import EXPORT_DIR, export_all
+
+    settings = get_settings()
+    configure_logging(settings.log_level)
+    engine = get_engine(settings)
+    try:
+        counts = export_all(engine)
+    finally:
+        engine.dispose()
+    print(f"Exported {len(counts)} files to {EXPORT_DIR} (see MANIFEST.md)")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -92,6 +108,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_ingest(args.sources or list(JOBS), force=args.force)
     if args.command == "quality-report":
         return run_quality_report()
+    if args.command == "export-tableau":
+        return run_export_tableau()
     return 2
 
 

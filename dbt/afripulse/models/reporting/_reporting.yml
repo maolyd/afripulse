@@ -1,0 +1,63 @@
+version: 2
+
+# Flat, dashboard-ready extracts for Tableau Public (exported to CSV by
+# `make export-tableau`). Every row carries data_label = REAL or SYNTHETIC.
+
+models:
+  - name: rpt_country_year
+    description: "REAL statistics. One row per country x year: all indicators side by side (default source, actuals only). Dashboards 1-4."
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [country_iso3, year]
+    columns:
+      - name: data_label
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [REAL]
+
+  - name: rpt_indicator_sources
+    description: "REAL statistics. One row per country x year x indicator x source, including projections. Source comparison."
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [country_iso3, year, indicator_code, source_id]
+
+  - name: rpt_synthetic_retail_transactions
+    description: "SYNTHETIC. One row per retail purchase with customer, merchant and payment attributes. Dashboard 5."
+    columns:
+      - name: txn_id
+        data_tests: [unique, not_null]
+      - name: data_label
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [SYNTHETIC]
+
+  - name: rpt_synthetic_mobile_money
+    description: "SYNTHETIC. One row per mobile money transaction. Dashboard 4."
+    columns:
+      - name: mm_txn_id
+        data_tests: [unique, not_null]
+      - name: data_label
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [SYNTHETIC]
+
+  - name: rpt_synthetic_loyalty_customers
+    description: "SYNTHETIC. One row per loyalty member: spend, points, balance and engagement. Dashboard 6."
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: balance_now
+        description: "Latest balance (semi-additive: already resolved per customer)."
+        data_tests:
+          - between:
+              arguments: {min_value: 0, max_value: 100000000}
+      - name: data_label
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [SYNTHETIC]
