@@ -1,8 +1,10 @@
 """Ingestion jobs: extract -> load -> audit, one function per source.
 
 Each job runs inside track_ingestion_run, so every attempt (successful or not)
-is recorded in audit.ingestion_runs. The run_id doubles as the _batch_id on
-every raw row written, linking each row to the run that loaded it.
+is recorded in audit.ingestion_runs. Before anything is loaded, the records are
+validated (afripulse.validation): error-level failures block the load.
+The run_id doubles as the _batch_id on every raw row written, linking each
+row to the run that loaded it.
 
 Every job accepts `force`: re-load even if the source looks unchanged.
 World Bank jobs always compare row by row (the loader skips unchanged rows),
@@ -29,15 +31,35 @@ from afripulse.ingestion.extractors.imf import IMFExtractor
 from afripulse.ingestion.extractors.worldbank import WorldBankExtractor
 from afripulse.ingestion.http_client import HttpClient
 from afripulse.sources_config import get_source, load_country_codes
+from afripulse.validation.checks import DataValidationError, validate_records
+from afripulse.validation.store import previous_row_count, save_validation_report
 
 logger = logging.getLogger(__name__)
 
 
-def _load(engine: Engine, source: dict[str, Any], result: ExtractResult, run) -> None:
-    """Shared final step: record counts, load the records, record what was written."""
+def _load(
+    engine: Engine,
+    source: dict[str, Any],
+    result: ExtractResult,
+    run,
+    country_codes: Sequence[str] | None = None,
+) -> None:
+    """Shared final steps: record counts, validate, then load."""
     run.rows_extracted = len(result.records) + result.rows_rejected
     run.rows_rejected = result.rows_rejected
     run.source_release = result.source_release
+
+    report = validate_records(
+        result.records,
+        rules=source.get("validation", {}),
+        key_columns=source["natural_key"],
+        reference_countries=set(country_codes or []),
+        previous_count=previous_row_count(engine, run.source_id, run.run_id),
+    )
+    save_validation_report(engine, run.run_id, report)
+    if report.failed_errors:
+        raise DataValidationError(f"Validation failed, nothing loaded: {report.summary()}")
+
     load = upsert_records(
         engine,
         table=source["raw_table"],
@@ -79,7 +101,7 @@ def run_worldbank_wdi(
             country_codes=country_codes,
             start_year=int(source["start_year"]),
         )
-        _load(engine, source, result, run)
+        _load(engine, source, result, run, country_codes)
 
 
 def run_imf_weo(
@@ -106,7 +128,7 @@ def run_imf_weo(
             return
 
         result = extractor.extract(indicator_codes, country_codes, release)
-        _load(engine, source, result, run)
+        _load(engine, source, result, run, country_codes)
 
 
 def run_file_source(
@@ -137,7 +159,7 @@ def run_file_source(
             return
 
         result = extractor.extract(country_codes, source["release"])
-        _load(engine, source, result, run)
+        _load(engine, source, result, run, country_codes)
 
 
 # Source id -> job. New sources are added here as their extractors are built.

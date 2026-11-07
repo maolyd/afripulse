@@ -32,6 +32,9 @@ sources:
     natural_key: [country_code]
     incremental: full_refresh       # small and slowly changing; snapshot in dbt (F14)
     findings: docs/discovery/worldbank_findings.md
+    validation:
+      min_records: 250                # 296 economies + aggregates in Task 2.1
+      max_drop_pct: 10
 
   worldbank_wdi:
     enabled: true
@@ -45,6 +48,18 @@ sources:
     natural_key: [indicator_code, country_iso3, year]
     incremental: row_hash             # loader skips unchanged rows (F12)
     findings: docs/discovery/worldbank_findings.md
+    validation:
+      min_records: 12000              # 10 indicators x 54 countries x ~26 years
+      country_field: country_iso3
+      min_countries: 54
+      year_field: year
+      year_range: [2000, 2030]
+      value_field: [payload, value]   # a list, because it is inside the payload
+      group_by: indicator_code        # null rate checked per indicator (F7)
+      max_null_pct: 35
+      max_null_pct_overrides:
+        FX.OWN.TOTL.ZS: 95            # survey years only: 86% null is expected (F7)
+      max_drop_pct: 10
     indicators:
       - code: SP.POP.TOTL
         name: Population, total
@@ -86,6 +101,13 @@ sources:
     incremental: new_release          # skipped if this release was already loaded
     projection_rule: year_gte_release_year   # provisional (F-IMF-5)
     findings: docs/discovery/imf_findings.md
+    validation:
+      min_records: 4000               # 2 indicators x 54 countries x up to 52 years
+      country_field: area_code
+      min_countries: 54
+      year_field: year
+      year_range: [1980, 2035]        # includes projections (F-IMF-5)
+      max_drop_pct: 10
     indicators:
       - code: NGDP_RPCH
         name: Real GDP growth (annual % change)
@@ -113,6 +135,15 @@ sources:
       population_and_counts: thousands   # F-UN-1
     projection_start_year: 2024         # F-UN-10
     findings: docs/discovery/un_wpp_findings.md
+    validation:
+      min_records: 8000               # 8,208 = 54 countries x 152 years (Task 2.3a)
+      country_field: [payload, ISO3_code]
+      min_countries: 54
+      year_field: year
+      year_range: [1950, 2101]        # 2101 holds 1 January only (F-UN-8)
+      value_field: [payload, TPopulation1July]
+      max_null_pct: 2                 # only the 2101 rows are null (0.7%)
+      max_drop_pct: 5
 
   findex:
     enabled: true
@@ -139,6 +170,15 @@ sources:
     incremental: file_checksum
     value_scale: fraction             # 0-1, not percent (F-FX-3)
     findings: docs/discovery/findex_findings.md
+    validation:
+      min_records: 1800               # 2,101 African rows in Findex 2025
+      country_field: codewb
+      min_countries: 45               # 48 of 54 surveyed (F-FX-6)
+      year_field: year
+      year_range: [2011, 2030]
+      value_field: [payload, account.t.d]
+      max_null_pct: 10                # 2.9% observed
+      max_drop_pct: 10
     indicators:
       - code: account.t.d
         name: Account (% age 15+)
