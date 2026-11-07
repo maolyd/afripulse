@@ -350,6 +350,8 @@ def generate_loyalty_events(
     """Members earn points on every purchase and sometimes redeem them.
 
     Processed in time order per customer, so the balance can never go negative.
+    A redemption is always timestamped BEFORE the customer's next purchase, so
+    balances stay consistent in time order (caught by the dbt reconciliation test).
     """
     points_per_usd = settings.loyalty["points_per_usd"]
     threshold = int(settings.loyalty["redeem_threshold"])
@@ -358,6 +360,8 @@ def generate_loyalty_events(
     purchases = retail[retail["customer_id"].isin(members)].sort_values(
         ["customer_id", "txn_ts"], kind="stable"
     )
+    # When does each customer shop next? (NaT after their last purchase.)
+    purchases = purchases.assign(next_txn_ts=purchases.groupby("customer_id")["txn_ts"].shift(-1))
 
     events = []
     balance: dict[str, int] = {}
@@ -369,7 +373,10 @@ def generate_loyalty_events(
         events.append((txn.customer_id, "earn", earned, current, txn.txn_ts, txn.txn_id))
         if current >= threshold and rng.random() < redeem_probability:
             current -= threshold
-            redeemed_at = txn.txn_ts + timedelta(hours=int(rng.integers(1, 72)))
+            delay = timedelta(hours=int(rng.integers(1, 72)))
+            if not pd.isna(txn.next_txn_ts):  # redeem before the next purchase
+                delay = min(delay, (txn.next_txn_ts - txn.txn_ts) / 2)
+            redeemed_at = txn.txn_ts + delay
             events.append((txn.customer_id, "redeem", threshold, current, redeemed_at, None))
         balance[txn.customer_id] = current
 

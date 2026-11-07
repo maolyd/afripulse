@@ -75,6 +75,14 @@ def find_invariant_violations(data: SyntheticDataset, start, end) -> list[str]:
 
     # Loyalty: balances never go negative, and only members take part.
     check((loyalty["balance_after"] < 0).sum(), "loyalty: negative balance")
+    # ...and in time order, each balance = previous balance + earned - redeemed.
+    ordered = loyalty.sort_values(["customer_id", "event_ts", "event_id"], kind="stable")
+    signed = ordered["points"].where(ordered["event_type"] == "earn", -ordered["points"])
+    previous = ordered.groupby("customer_id")["balance_after"].shift(1).fillna(0)
+    check(
+        (previous + signed != ordered["balance_after"]).sum(),
+        "loyalty: balance not consistent in time order",
+    )
     members = set(customers.loc[customers["is_loyalty_member"], "customer_id"])
     check((~loyalty["customer_id"].isin(members)).sum(), "loyalty: event for non-member")
     return problems

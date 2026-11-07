@@ -1,6 +1,7 @@
 """Unit tests for the synthetic data generator (no database: calibration is faked)."""
 
 import dataclasses
+from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -127,3 +128,17 @@ def test_fingerprint_changes_only_when_inputs_change(settings):
     assert synthetic_fingerprint(settings, calibration(changed_real)) != base
     reseeded = dataclasses.replace(settings, raw={**settings.raw, "seed": 7})
     assert synthetic_fingerprint(reseeded, calibration()) != base
+
+
+def test_invariants_catch_loyalty_balances_out_of_time_order(settings, dataset):
+    """Regression test: a redemption stamped after the next purchase (found by dbt)."""
+    loyalty = dataset.loyalty_events.copy()
+    redeem = loyalty.index[loyalty["event_type"] == "redeem"][0]
+    customer = loyalty.at[redeem, "customer_id"]
+    last_event = loyalty.loc[loyalty["customer_id"] == customer, "event_ts"].max()
+    loyalty.at[redeem, "event_ts"] = last_event.to_pydatetime() + timedelta(hours=1)  # too late
+    broken = dataclasses.replace(dataset, loyalty_events=loyalty)
+
+    problems = find_invariant_violations(broken, settings.start, settings.end)
+
+    assert any("balance not consistent in time order" in p for p in problems)

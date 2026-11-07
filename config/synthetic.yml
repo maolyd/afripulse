@@ -6,7 +6,7 @@
 # =====================================================================
 
 seed: 20261107                 # change it to get a different (but equally realistic) dataset
-generator_version: 1           # bump when the generation logic changes
+generator_version: 2           # v2: redemptions always precede the next purchase
 
 period:
   start: 2024-01-01

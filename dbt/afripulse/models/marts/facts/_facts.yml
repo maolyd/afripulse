@@ -1,0 +1,183 @@
+version: 2
+
+# Every fact: its grain is tested for uniqueness, and every foreign key is
+# tested against its dimension (referential integrity).
+
+models:
+  - name: fact_economic_indicators
+    description: >
+      REAL statistics. Grain: country x year x indicator x source (latest release).
+      value is non-additive: average with population weights, never sum.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [country_key, indicator_key, source_key, year]
+    columns:
+      - name: country_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: country_key
+      - name: indicator_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_indicator')
+                field: indicator_key
+      - name: source_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_source')
+                field: source_key
+      - name: value
+        data_tests: [not_null]
+      - name: is_projection
+        data_tests: [not_null]
+
+  - name: fact_digital_adoption
+    description: "REAL statistics. Grain: country x year (default sources, actuals only)."
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [country_key, year]
+    columns:
+      - name: country_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: country_key
+      - name: internet_users_pct
+        data_tests:
+          - between:
+              arguments: {min_value: 0, max_value: 100}
+      - name: mobile_money_account_pct
+        data_tests:
+          - between:
+              arguments: {min_value: 0, max_value: 100}
+
+  - name: fact_retail_transactions
+    description: "SYNTHETIC. Grain: one row per retail purchase. Incremental."
+    columns:
+      - name: txn_id
+        data_tests: [unique, not_null]
+      - name: date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: country_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: country_key
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: merchant_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_merchant')
+                field: merchant_key
+      - name: payment_method_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_payment_method')
+                field: payment_method_key
+      - name: amount_usd
+        description: Additive.
+        data_tests: [not_null, positive]
+
+  - name: fact_mobile_money
+    description: "SYNTHETIC. Grain: one row per mobile money wallet transaction. Incremental."
+    columns:
+      - name: mm_txn_id
+        data_tests: [unique, not_null]
+      - name: date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: country_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: country_key
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: counterparty_customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: merchant_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_merchant')
+                field: merchant_key
+      - name: amount_usd
+        description: Additive (filter status = 'completed' for value moved).
+        data_tests: [not_null, positive]
+
+  - name: fact_loyalty_transactions
+    description: "SYNTHETIC. Grain: one row per loyalty event. Incremental."
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: country_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: country_key
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: balance_after
+        description: SEMI-ADDITIVE. Never sum over time; take the latest per customer.
+        data_tests:
+          - between:
+              arguments: {min_value: 0, max_value: 100000000}
