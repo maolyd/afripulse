@@ -1,0 +1,69 @@
+version: 2
+
+# Every dimension: unique, non-null surrogate key AND natural key.
+# Dimensions marked SYNTHETIC hold generated data (docs/synthetic_data.md).
+
+models:
+  - name: dim_country
+    description: African countries in scope (54, ADR 0001) plus the unknown member '-1'.
+    columns:
+      - name: country_key
+        data_tests: [unique, not_null]
+      - name: country_iso3
+        data_tests: [unique, not_null]
+      - name: country_iso2
+        description: Namibia's "NA" must be text, not null (F-UN-3).
+        data_tests: [not_null]
+      - name: au_region
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Northern, Western, Central, Eastern, Southern, Not applicable]
+
+  - name: dim_indicator
+    description: AfriPulse indicator concepts, with unit, theme and default source.
+    columns:
+      - name: indicator_key
+        data_tests: [unique, not_null]
+      - name: indicator_code
+        data_tests: [unique, not_null]
+
+  - name: dim_source
+    description: Data sources and licences. is_synthetic marks the generator.
+    columns:
+      - name: source_key
+        data_tests: [unique, not_null]
+      - name: source_id
+        data_tests: [unique, not_null]
+
+  - name: dim_date
+    description: One row per day; date_key is YYYYMMDD.
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]
+      - name: calendar_date
+        data_tests: [unique, not_null]
+
+  - name: dim_payment_method
+    description: Payment methods.
+    columns:
+      - name: payment_method_key
+        data_tests: [unique, not_null]
+      - name: payment_method_code
+        data_tests: [unique, not_null]
+
+  - name: dim_customer
+    description: SYNTHETIC customers, plus the unknown member '-1'.
+    columns:
+      - name: customer_key
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests: [unique, not_null]
+
+  - name: dim_merchant
+    description: SYNTHETIC merchants, plus the unknown member '-1'.
+    columns:
+      - name: merchant_key
+        data_tests: [unique, not_null]
+      - name: merchant_id
+        data_tests: [unique, not_null]

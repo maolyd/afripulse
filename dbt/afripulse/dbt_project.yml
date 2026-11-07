@@ -24,6 +24,14 @@ flags:
 
 vars:
   un_wpp_projection_start_year: 2024   # F-UN-10: WPP 2024 estimates end in 2023
+  sources_disagree_threshold_pp: 2     # F-IMF-9: flag sources differing by > 2 points
+  date_spine_start: "2019-01-01"       # earliest synthetic signup date
+  date_spine_end: "2026-12-31"
+
+# Tableau's read-only role may use the marts schema (table SELECT grants are
+# set per model below; schema USAGE is granted here, after every run).
+on-run-end:
+  - "{% for schema in schemas %}{% if schema == 'marts' %}grant usage on schema marts to afripulse_reader;{% endif %}{% endfor %}"
 
 seeds:
   afripulse:

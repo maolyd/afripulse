@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: int_indicator_values_unioned
+    description: >
+      All real indicator values in one long shape, mapped to AfriPulse concepts.
+      Grain: country x year x indicator concept x source.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [country_iso3, year, indicator_code, source_id]
+    columns:
+      - name: indicator_code
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('indicator_concepts')
+                field: indicator_code
+      - name: source_id
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [worldbank_wdi, imf_weo, un_wpp, findex]
+      - name: value
+        data_tests: [not_null]
+
+  - name: int_indicator_values_compared
+    description: Indicator values with default-source and source-disagreement flags.
+    columns:
+      - name: is_default_source
+        data_tests: [not_null]
+      - name: sources_disagree
+        description: True when sources differ by more than var('sources_disagree_threshold_pp') points.
+        data_tests: [not_null]
