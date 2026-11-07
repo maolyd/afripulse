@@ -9,9 +9,7 @@ models:
     columns:
       - name: country_iso3
         description: Three-character World Bank code (ISO 3166-1 alpha-3 for economies).
-        data_tests:
-          - unique
-          - not_null
+        data_tests: [unique, not_null]
       - name: country_iso2
         description: Two-character code. Namibia's "NA" must survive as text (F-UN-3).
       - name: wb_region_name
@@ -25,5 +23,33 @@ models:
                 where: "not is_aggregate"
       - name: is_aggregate
         description: True for regional and income-group aggregates such as "Africa" (F1).
+        data_tests: [not_null]
+
+  - name: stg_worldbank__indicator_values
+    description: World Bank WDI values with a value, one row per country x indicator x year.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [country_iso3, source_indicator_code, year]
+    columns:
+      - name: country_iso3
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('african_countries')
+                field: iso3
+      - name: source_indicator_code
+        description: World Bank indicator code, e.g. IT.NET.USER.ZS.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('indicator_source_map')
+                field: source_indicator_code
+      - name: year
+        data_tests:
+          - between:
+              arguments: {min_value: 2000, max_value: 2030}
+      - name: value
+        data_tests: [not_null]

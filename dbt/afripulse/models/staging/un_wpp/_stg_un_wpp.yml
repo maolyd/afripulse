@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_un_wpp__demographic_indicators
+    description: >
+      UN World Population Prospects, one row per country x year (1950-2100).
+      Counts converted from thousands to persons (F-UN-1).
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [source_release, country_iso3, year]
+    columns:
+      - name: country_iso3
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('african_countries')
+                field: iso3
+      - name: year
+        data_tests:
+          - between:
+              arguments: {min_value: 1950, max_value: 2100}
+      - name: population_total
+        description: Mid-year population in persons (TPopulation1July x 1000).
+        data_tests: [not_null, positive]
+      - name: is_projection
+        data_tests: [not_null]

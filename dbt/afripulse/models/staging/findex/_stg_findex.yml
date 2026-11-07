@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_findex__values
+    description: >
+      Global Findex values unpivoted to one row per country x year x demographic
+      group x indicator. Values converted from fractions to percent (F-FX-3).
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [source_release, country_iso3, year, demographic_group, demographic_subgroup, source_indicator_code]
+    columns:
+      - name: country_iso3
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('african_countries')
+                field: iso3
+      - name: value
+        description: Percentage of adults (0-100).
+        data_tests:
+          - not_null
+          - between:
+              arguments: {min_value: 0, max_value: 100}
+      - name: survey_wave
+        description: Survey wave; 2021 and 2022 are one wave (F-FX-8).
+        data_tests: [not_null]

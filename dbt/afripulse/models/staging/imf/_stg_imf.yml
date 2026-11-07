@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_imf__weo_values
+    description: IMF World Economic Outlook values per release, with projections flagged (F-IMF-5).
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [source_release, source_indicator_code, country_iso3, year]
+    columns:
+      - name: country_iso3
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('african_countries')
+                field: iso3
+      - name: source_release
+        description: WEO release, e.g. WEO-2026-10 (F-IMF-3).
+        data_tests: [not_null]
+      - name: is_projection
+        description: True when year >= release year (provisional rule).
+        data_tests: [not_null]
+      - name: value
+        data_tests: [not_null]

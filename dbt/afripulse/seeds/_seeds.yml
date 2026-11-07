@@ -1,0 +1,56 @@
+version: 2
+
+seeds:
+  - name: indicator_concepts
+    description: AfriPulse indicator concepts (docs/source_to_target_mapping.md). Becomes dim_indicator.
+    columns:
+      - name: indicator_code
+        data_tests: [unique, not_null]
+      - name: default_source_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('data_sources')
+                field: source_id
+
+  - name: indicator_source_map
+    description: Which source code feeds which concept, per source.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [source_id, source_indicator_code]
+    columns:
+      - name: indicator_code
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('indicator_concepts')
+                field: indicator_code
+
+  - name: payment_methods
+    description: Payment methods. Becomes dim_payment_method.
+    columns:
+      - name: payment_method_code
+        data_tests: [unique, not_null]
+
+  - name: data_sources
+    description: Data sources and licences. Becomes dim_source.
+    columns:
+      - name: source_id
+        data_tests: [unique, not_null]
+
+  - name: african_countries
+    description: >
+      The single definition of Africa in AfriPulse (ADR 0001), loaded from
+      data/reference/african_countries.csv, the same file Python uses.
+    columns:
+      - name: iso3
+        data_tests: [unique, not_null]
+      - name: iso2
+        description: Namibia's "NA" must load as text, not null (F-UN-3).
+        data_tests: [unique, not_null]
+      - name: au_region
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Northern, Western, Central, Eastern, Southern]

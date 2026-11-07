@@ -1,0 +1,6 @@
+source_id,provider,dataset,licence,is_synthetic,homepage
+worldbank_wdi,World Bank,World Development Indicators,CC BY 4.0,false,https://data.worldbank.org
+imf_weo,International Monetary Fund,World Economic Outlook,IMF Copyright and Usage terms,false,https://www.imf.org/en/Publications/WEO
+un_wpp,"United Nations, DESA Population Division",World Population Prospects 2024,CC BY 3.0 IGO,false,https://population.un.org/wpp
+findex,World Bank,Global Findex Database 2025,CC BY 4.0,false,https://www.worldbank.org/en/publication/globalfindex
+synthetic,AfriPulse synthetic generator,Synthetic transactions calibrated to real statistics,Project-generated,true,

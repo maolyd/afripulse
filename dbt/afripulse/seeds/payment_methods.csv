@@ -1,0 +1,5 @@
+payment_method_code,payment_method_name,is_digital,sort_order
+cash,Cash,false,1
+card,Card,true,2
+mobile_money,Mobile money,true,3
+bank_transfer,Bank transfer,true,4

@@ -13,13 +13,29 @@ profile: afripulse
 
 model-paths: ["models"]
 macro-paths: ["macros"]
-seed-paths: ["seeds"]
+# data/reference holds african_countries.csv (ADR 0001): one file, used by Python AND dbt.
+seed-paths: ["seeds", "../../data/reference"]
 snapshot-paths: ["snapshots"]
 test-paths: ["tests"]
 clean-targets: ["target", "dbt_packages"]
 
 flags:
   send_anonymous_usage_stats: false
+
+vars:
+  un_wpp_projection_start_year: 2024   # F-UN-10: WPP 2024 estimates end in 2023
+
+seeds:
+  afripulse:
+    +schema: reference
+    african_countries:
+      +column_types:
+        iso2: text                      # keep Namibia's "NA" as text (F-UN-3)
+        latitude: numeric
+        longitude: numeric
+    indicator_concepts:
+      +column_types:
+        higher_is_better: boolean
 
 models:
   afripulse:

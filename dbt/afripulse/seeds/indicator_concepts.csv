@@ -1,0 +1,18 @@
+indicator_code,indicator_name,unit,theme,default_source_id,higher_is_better
+population_total,Total population (mid-year),persons,demography,un_wpp,
+gdp_current_usd,"GDP, current prices",USD,economy,worldbank_wdi,true
+gdp_per_capita_current_usd,"GDP per capita, current prices",USD,economy,worldbank_wdi,true
+gdp_real_growth_pct,Real GDP growth,%,economy,imf_weo,true
+inflation_cpi_pct,Consumer price inflation,%,economy,imf_weo,false
+urban_population_pct,Urban population share,%,demography,worldbank_wdi,
+internet_users_pct,Individuals using the internet,%,connectivity,worldbank_wdi,true
+mobile_subscriptions_per_100,Mobile cellular subscriptions,per 100 people,connectivity,worldbank_wdi,true
+fixed_broadband_per_100,Fixed broadband subscriptions,per 100 people,connectivity,worldbank_wdi,true
+account_ownership_pct,"Account ownership, age 15+",%,financial_inclusion,findex,true
+fi_account_pct,"Financial institution account, age 15+",%,financial_inclusion,findex,true
+mobile_money_account_pct,"Mobile money account, age 15+",%,financial_inclusion,findex,true
+borrowed_any_pct,"Borrowed any money, age 15+",%,financial_inclusion,findex,
+median_age_years,Median age,years,demography,un_wpp,
+life_expectancy_years,Life expectancy at birth,years,demography,un_wpp,true
+fertility_rate,Total fertility rate,births per woman,demography,un_wpp,
+population_growth_pct,Population growth rate,%,demography,un_wpp,
