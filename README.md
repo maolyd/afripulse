@@ -19,7 +19,7 @@ Python 3.12 · PostgreSQL 16 · dbt Core · Apache Airflow (planned) · Tableau 
 - [x] Phase 4: Data warehousing
 - [x] Phase 5: dbt transformation
 - [ ] Phase 6: Pipeline automation
-- [ ] Phase 7: Data quality
+- [x] Phase 7: Data quality
 - [ ] Phase 8: Tableau dashboards
 - [ ] Phase 9: Portfolio documentation
 

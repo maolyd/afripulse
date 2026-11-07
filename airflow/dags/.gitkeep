@@ -1,0 +1,4 @@
+
+# --- Airflow (only the DAGs are committed) ---
+airflow/*
+!airflow/dags/

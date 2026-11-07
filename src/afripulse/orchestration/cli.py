@@ -4,8 +4,10 @@ Examples:
     python -m afripulse.orchestration.cli ingest                 # every available source
     python -m afripulse.orchestration.cli ingest worldbank_wdi   # one source
     python -m afripulse.orchestration.cli ingest imf_weo --force # reload even if unchanged
+    python -m afripulse.orchestration.cli quality-report         # GREEN / AMBER / RED report
 
-Exit code 0 means every requested source succeeded; 1 means at least one failed.
+Exit code 0 means success; 1 means a source failed (ingest) or the data quality
+status is RED (quality-report), so schedulers such as Airflow mark the task failed.
 One failing source does not stop the others: each is attempted and audited.
 """
 
@@ -34,6 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--force", action="store_true", help="reload even if the source release is unchanged"
     )
+    commands.add_parser("quality-report", help="build the data quality report (exit 1 if RED)")
     return parser
 
 
@@ -61,6 +64,24 @@ def run_ingest(source_ids: Sequence[str], force: bool = False) -> int:
     return 0
 
 
+def run_quality_report() -> int:
+    from afripulse.quality.report import build_report, save_report
+
+    settings = get_settings()
+    configure_logging(settings.log_level)
+    engine = get_engine(settings)
+    try:
+        report = build_report(engine)
+        path = save_report(engine, report)
+    finally:
+        engine.dispose()
+    print(
+        f"Data quality status: {report.status} "
+        f"({report.count('RED')} red, {report.count('AMBER')} amber). Report: {path}"
+    )
+    return 1 if report.status == "RED" else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -69,6 +90,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         if unknown:
             parser.error(f"unknown source(s) {unknown}; available: {sorted(JOBS)}")
         return run_ingest(args.sources or list(JOBS), force=args.force)
+    if args.command == "quality-report":
+        return run_quality_report()
     return 2
 
 

@@ -36,3 +36,7 @@ dbt/**/logs/
 # --- macOS and editor files ---
 .DS_Store
 .vscode/
+
+
+# --- Generated data quality reports (regenerated every run) ---
+reports/data_quality/*.md
