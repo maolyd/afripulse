@@ -117,3 +117,17 @@ def track_ingestion_run(engine: Engine, source_id: str) -> Iterator[IngestionRun
             run.rows_rejected,
             duration,
         )
+
+
+def release_already_loaded(engine: Engine, source_id: str, release: str) -> bool:
+    """True if a previous run of `source_id` successfully loaded `release`.
+
+    Used for release-based incremental loading: if the source has not
+    published anything new since the last successful run, skip it.
+    """
+    query = text(
+        "SELECT EXISTS (SELECT 1 FROM audit.ingestion_runs "
+        "WHERE source_id = :source_id AND source_release = :release AND status = 'success')"
+    )
+    with engine.connect() as conn:
+        return conn.execute(query, {"source_id": source_id, "release": release}).scalar_one()

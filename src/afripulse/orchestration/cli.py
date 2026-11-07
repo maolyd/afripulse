@@ -3,6 +3,7 @@
 Examples:
     python -m afripulse.orchestration.cli ingest                 # every available source
     python -m afripulse.orchestration.cli ingest worldbank_wdi   # one source
+    python -m afripulse.orchestration.cli ingest imf_weo --force # reload even if unchanged
 
 Exit code 0 means every requested source succeeded; 1 means at least one failed.
 One failing source does not stop the others: each is attempted and audited.
@@ -30,13 +31,16 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "sources", nargs="*", metavar="SOURCE", help=f"source ids (default: all): {sorted(JOBS)}"
     )
+    ingest.add_argument(
+        "--force", action="store_true", help="reload even if the source release is unchanged"
+    )
     return parser
 
 
-def run_ingest(source_ids: Sequence[str]) -> int:
+def run_ingest(source_ids: Sequence[str], force: bool = False) -> int:
     settings = get_settings()
     log_file = configure_logging(settings.log_level)
-    logger.info("Ingesting %s (log file: %s)", list(source_ids), log_file)
+    logger.info("Ingesting %s force=%s (log file: %s)", list(source_ids), force, log_file)
 
     engine = get_engine(settings)
     client = HttpClient(RetryPolicy.from_config(load_sources_config()["defaults"]["http"]))
@@ -44,7 +48,7 @@ def run_ingest(source_ids: Sequence[str]) -> int:
     try:
         for source_id in source_ids:
             try:
-                JOBS[source_id](engine, client)
+                JOBS[source_id](engine, client, force=force)
             except Exception:  # already logged and audited by track_ingestion_run
                 failed.append(source_id)
     finally:
@@ -64,7 +68,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         unknown = sorted(set(args.sources) - JOBS.keys())
         if unknown:
             parser.error(f"unknown source(s) {unknown}; available: {sorted(JOBS)}")
-        return run_ingest(args.sources or list(JOBS))
+        return run_ingest(args.sources or list(JOBS), force=args.force)
     return 2
 
 
