@@ -29,7 +29,7 @@ sources:
     licence: CC BY 4.0
     page_size: 400
     raw_table: raw.worldbank_countries
-    natural_key: [id]
+    natural_key: [country_code]
     incremental: full_refresh       # small and slowly changing; snapshot in dbt (F14)
     findings: docs/discovery/worldbank_findings.md
 
@@ -42,7 +42,7 @@ sources:
     page_size: 1000
     start_year: 2000
     raw_table: raw.worldbank_indicator_values
-    natural_key: [indicator_code, countryiso3code, date]
+    natural_key: [indicator_code, country_iso3, year]
     incremental: source_last_updated   # skip reload if 'lastupdated' unchanged (F12)
     findings: docs/discovery/worldbank_findings.md
     indicators:

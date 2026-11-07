@@ -1,0 +1,75 @@
+"""Ingestion jobs: extract -> load -> audit, one function per source.
+
+Each job runs inside track_ingestion_run, so every attempt (successful or not)
+is recorded in audit.ingestion_runs. The run_id doubles as the _batch_id on
+every raw row written, linking each row to the run that loaded it.
+"""
+
+import logging
+from collections.abc import Callable, Sequence
+from typing import Any
+
+from sqlalchemy import Engine
+
+from afripulse.db.audit import track_ingestion_run
+from afripulse.db.loader import upsert_records
+from afripulse.ingestion.base import ExtractResult
+from afripulse.ingestion.extractors.worldbank import WorldBankExtractor
+from afripulse.ingestion.http_client import HttpClient
+from afripulse.sources_config import get_source, load_country_codes
+
+logger = logging.getLogger(__name__)
+
+
+def _load(engine: Engine, source: dict[str, Any], result: ExtractResult, run) -> None:
+    """Shared final step: record counts, load the records, record what was written."""
+    run.rows_extracted = len(result.records) + result.rows_rejected
+    run.rows_rejected = result.rows_rejected
+    run.source_release = result.source_release
+    load = upsert_records(
+        engine,
+        table=source["raw_table"],
+        key_columns=source["natural_key"],
+        records=result.records,
+        batch_id=run.run_id,
+        source_release=result.source_release,
+    )
+    run.rows_loaded = load.loaded
+
+
+def run_worldbank_countries(
+    engine: Engine,
+    client: HttpClient,
+    source_id: str = "worldbank_countries",
+    source: dict[str, Any] | None = None,
+) -> None:
+    source = source or get_source(source_id)
+    with track_ingestion_run(engine, source_id) as run:
+        extractor = WorldBankExtractor(client, source["base_url"], source["page_size"])
+        _load(engine, source, extractor.extract_countries(), run)
+
+
+def run_worldbank_wdi(
+    engine: Engine,
+    client: HttpClient,
+    source_id: str = "worldbank_wdi",
+    source: dict[str, Any] | None = None,
+    country_codes: Sequence[str] | None = None,
+) -> None:
+    source = source or get_source(source_id)
+    country_codes = country_codes or load_country_codes()
+    with track_ingestion_run(engine, source_id) as run:
+        extractor = WorldBankExtractor(client, source["base_url"], source["page_size"])
+        result = extractor.extract_indicators(
+            indicator_codes=[indicator["code"] for indicator in source["indicators"]],
+            country_codes=country_codes,
+            start_year=int(source["start_year"]),
+        )
+        _load(engine, source, result, run)
+
+
+# Source id -> job. New sources are added here as their extractors are built.
+JOBS: dict[str, Callable[[Engine, HttpClient], None]] = {
+    "worldbank_countries": run_worldbank_countries,
+    "worldbank_wdi": run_worldbank_wdi,
+}
