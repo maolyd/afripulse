@@ -58,3 +58,12 @@ src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+
+# ---------- coverage ----------
+[tool.coverage.run]
+source = ["afripulse"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
