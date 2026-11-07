@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     )
 
     env: str = "dev"
+    log_level: str = "INFO"
 
     db_host: str = "localhost"
     db_port: int = Field(default=5432, ge=1, le=65535)
