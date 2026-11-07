@@ -11,10 +11,11 @@ Options:
     --header-row N      Row number holding the column names (default: 0)
     --iso3-col COLUMN   Column with ISO3 country codes, to check African coverage
     --year-col COLUMN   Column with years, to show the time range
+    --max-columns N     Maximum number of columns to list (default: 80)
 
 Example:
     python scripts/explore/profile_file.py \\
-        data/landing/manual/un_wpp/WPP2024_Demographic_Indicators_Medium.csv.gz \\
+        data/landing/manual/un_wpp/WPP2024_Demographic_Indicators_Medium.csv \\
         --iso3-col ISO3_code --year-col Time
 """
 
@@ -131,14 +132,14 @@ def show_raw_top(path: Path, sheet: str | None) -> None:
         print(raw)
 
 
-def show_columns(df: pd.DataFrame) -> None:
+def show_columns(df: pd.DataFrame, max_columns: int) -> None:
     section("3. SHAPE AND COLUMNS")
     memory_mb = df.memory_usage(deep=True).sum() / 1_000_000
     print(f"Rows: {len(df):,}   Columns: {df.shape[1]}   Memory: {memory_mb:.1f} MB")
     print(f"Fully duplicated rows: {df.duplicated().sum():,}\n")
 
     print(f"{'#':>3}  {'column':<30}{'dtype':<9}{'null %':>8}{'unique':>9}  example")
-    for i, column in enumerate(df.columns):
+    for i, column in enumerate(df.columns[:max_columns]):
         series = df[column]
         non_null = series.dropna()
         example = str(non_null.iloc[0])[:28] if not non_null.empty else ""
@@ -146,6 +147,15 @@ def show_columns(df: pd.DataFrame) -> None:
             f"{i:>3}  {str(column)[:29]:<30}{str(series.dtype):<9}"
             f"{100 * series.isna().mean():>7.1f}%{series.nunique():>9}  {example}"
         )
+
+    hidden = df.shape[1] - max_columns
+    if hidden > 0:
+        print(f"\n... {hidden} more columns not shown (use --max-columns to see more)")
+        null_pct = 100 * df.isna().mean()
+        print(
+            f"Across ALL columns: null % ranges from {null_pct.min():.1f}% to {null_pct.max():.1f}%"
+        )
+        print(f"Columns that are 100% empty: {(null_pct == 100).sum()}")
 
 
 def show_country_coverage(df: pd.DataFrame, column: str) -> None:
@@ -185,6 +195,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--header-row", type=int, default=0)
     parser.add_argument("--iso3-col")
     parser.add_argument("--year-col")
+    parser.add_argument("--max-columns", type=int, default=80)
     return parser.parse_args()
 
 
@@ -196,7 +207,7 @@ def main() -> None:
     show_file_facts(args.path)
     show_raw_top(args.path, args.sheet)
     df = read_table(args.path, args.sheet, header_row=args.header_row)
-    show_columns(df)
+    show_columns(df, args.max_columns)
     if args.iso3_col:
         show_country_coverage(df, args.iso3_col)
     if args.year_col:
