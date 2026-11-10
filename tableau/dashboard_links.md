@@ -18,6 +18,7 @@
 - **Technique note:** the top-10 chart uses context filters so Top N is computed after the
   indicator, disagreement and projection filters (Tableau order of operations).
 
+
   ## 3. Mobile & Internet Adoption
 
 - **Link:** (https://public.tableau.com/app/profile/mawuli.dogbey/viz/AfriPulseAfricanDigitalEconomyOverview/MobileInternetAdoption)
@@ -33,3 +34,19 @@
     ownership), so the gap caps subscriptions at 100.
   - Latest value and growth since 2015 use FIXED level-of-detail expressions, aggregated with AVG
     (not SUM) because the value repeats on every year row.
+
+    ## 4. Mobile Money & Digital Payments
+
+- **Link:** (https://public.tableau.com/app/profile/mawuli.dogbey/viz/AfriPulseAfricanDigitalEconomyOverview/MobileMoneyPayments)
+- **Screenshot:** [screenshots/04_mobile_money_payments.png](screenshots/04_mobile_money_payments.png)
+- **Data:** `real_country_year.csv` (REAL, Global Findex) + `SYNTHETIC_mobile_money_transactions.csv`
+  (SYNTHETIC, labelled with a banner on the dashboard)
+- **Findings:**
+  - Real (Findex): in Kenya, Ghana, Uganda and Senegal mobile money accounts nearly equal all
+    accounts; in South Africa, Egypt and Nigeria accounts are mostly bank-based.
+  - Synthetic: 251,139 wallet transactions moving $5.19m (average $20.99, fee revenue $29,846).
+    P2P transfers move the most value, with December peaks.
+  - The synthetic value ranking by country follows the real Findex adoption ranking, which is
+    evidence the generator's calibration works.
+- **Data check:** the failure rate is 1.6%, not the configured 2%, because purchase-linked merchant
+  payments never fail (`generators.py`, line 338): a deliberate consistency rule.
