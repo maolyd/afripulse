@@ -6,7 +6,7 @@
 
 ## 2. Country Comparison
 
-- **Link:** PASTE-YOUR-SHARE-LINK-HERE
+- **Link:** (https://public.tableau.com/app/profile/mawuli.dogbey/viz/AfriPulseAfricanDigitalEconomyOverview/CountryComparison)
 - **Screenshot:** [screenshots/02_country_comparison.png](screenshots/02_country_comparison.png)
 - **Data:** `real_country_year.csv`, `real_indicator_sources.csv` (REAL)
 - **Findings:**
