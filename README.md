@@ -1,73 +1,136 @@
 # AfriPulse
+
 [![CI](https://github.com/maolyd/afripulse/actions/workflows/ci.yml/badge.svg)](https://github.com/maolyd/afripulse/actions/workflows/ci.yml)
 
-**An African Digital Economy and Consumer Intelligence Data Platform.**
+**An end-to-end data platform for Africa's digital economy:** public statistics from the
+World Bank, IMF, UN and Global Findex are ingested, validated, modelled into a star schema
+with dbt, orchestrated with Airflow, quality-scored daily, and published as six Tableau
+Public dashboards. A calibrated synthetic dataset adds consumer, mobile money and loyalty
+transactions that public sources do not provide.
 
-AfriPulse ingests public economic, demographic, connectivity and financial-inclusion
-data for African countries, combines it with clearly labelled synthetic consumer
-transaction data, and models it into an analytics-ready PostgreSQL data warehouse
-using Python, dbt and Tableau.
+> **Synthetic data notice:** every table, file and dashboard built from generated data is
+> labelled SYNTHETIC. It is calibrated to real statistics but describes no real person,
+> merchant or transaction.
 
-> 🚧 Work in progress. Built phase by phase as a data engineering portfolio project.
+**[View the live dashboards](https://public.tableau.com/app/profile/mawuli.dogbey/viz/AfriPulseAfricanDigitalEconomyOverview2024/Overview)**
 
-## Tech Stack
-Python 3.12 · PostgreSQL 16 · dbt Core · Apache Airflow (planned) · Tableau · Git/GitHub
+![AfriPulse overview dashboard](tableau/screenshots/01_overview.png)
 
-## Project Status
-- [x] Phase 1: Project foundation
-- [x] Phase 2: Data discovery
-- [x] Phase 3: Data ingestion
-- [x] Phase 4: Data warehousing
-- [x] Phase 5: dbt transformation
-- [x] Phase 6: Pipeline automation
-- [x] Phase 7: Data quality
-- [x] Phase 8: Tableau dashboards
-- [ ] Phase 9: Portfolio documentation
+---
 
-## Data Disclaimer
-Public statistics come from sources such as the World Bank and IMF.
-Transaction-level data (customers, merchants, payments, loyalty) is **synthetic**
-and is never presented as real-world observations.
-
-## Running the Pipeline
-
-```bash
-make db-setup      # create the database, schemas and tables (idempotent)
-make ingest        # load every source; unchanged sources are skipped
-make check         # lint + 123 automated tests
-make coverage      # coverage report (minimum 80% enforced)
-```
-
-| Source | Type | Raw table | Incremental strategy |
-|---|---|---|---|
-| World Bank countries | REST API | `raw.worldbank_countries` | Row hash (unchanged rows skipped) |
-| World Bank WDI (10 indicators) | REST API | `raw.worldbank_indicator_values` | Row hash |
-| IMF World Economic Outlook | REST API | `raw.imf_weo_values` | New release detected from the API |
-| UN World Population Prospects | CSV file | `raw.un_wpp_demographic_indicators` | File checksum (SHA-256) |
-| Global Findex 2025 | Excel file | `raw.findex_values` | File checksum |
-| **Synthetic** transactions | Generated | `raw_synthetic.*` | Fingerprint of settings + real calibration |
-
-Every run is recorded in `audit.ingestion_runs`, and every pre-load validation
-check in `audit.validation_results`. See [docs/synthetic_data.md](docs/synthetic_data.md)
-for how the synthetic data is calibrated and labelled.
-
-
-## Dashboards (Tableau Public)
-
-Six dashboards, built in Tableau Public from the CSV extracts produced by `make export-tableau`.
-Dashboards marked SYNTHETIC carry a visible banner: their data is generated, calibrated to real
-statistics, and never describes real people or transactions.
+## What it shows
 
 | # | Dashboard | Data | Key finding |
 |---|---|---|---|
 | 1 | African Digital Economy Overview | REAL | 40.9% of Africans online in 2024 (51 of 54 countries reporting) |
-| 2 | Country Comparison | REAL | IMF and World Bank GDP growth differ by >2 points in 99 country-years, mostly fragile states |
-| 3 | Mobile & Internet Adoption | REAL | 96 mobile subscriptions per 100 people, but 41% online; fixed broadband about 3 per 100 |
-| 4 | Mobile Money & Digital Payments | REAL + SYNTHETIC | Mobile-money-led (Kenya, Ghana) vs bank-led (South Africa, Egypt) inclusion |
-| 5 | Retail & Consumer Transactions | SYNTHETIC | Month-end uplift 31%, validated against the generator's x1.3 setting |
-| 6 | Customer Loyalty Analytics | SYNTHETIC | Points reconcile exactly; 26.7% breakage (5.8m points liability) |
+| 2 | Country Comparison | REAL | IMF and World Bank GDP growth differ by more than 2 points in 99 country-years, mostly in fragile states |
+| 3 | Mobile & Internet Adoption | REAL | 96 mobile subscriptions per 100 people but 41% online; fixed broadband about 3 per 100 |
+| 4 | Mobile Money & Digital Payments | REAL + SYNTHETIC | Mobile-money-led inclusion (Kenya, Ghana) versus bank-led (South Africa, Egypt) |
+| 5 | Retail & Consumer Transactions | SYNTHETIC | Month-end uplift of 31%, validated against the generator's x1.3 setting |
+| 6 | Customer Loyalty Analytics | SYNTHETIC | Points reconcile exactly; 26.7% breakage leaves a 5.8m-point liability |
 
-**Live dashboards:** [Tableau Public workbook](https://public.tableau.com/app/profile/mawuli.dogbey/viz/AfriPulseAfricanDigitalEconomyOverview2024/Overview) · links, screenshots and findings
-for each dashboard: [`tableau/dashboard_links.md`](tableau/dashboard_links.md)
+Links, screenshots and findings for every dashboard: [`tableau/dashboard_links.md`](tableau/dashboard_links.md)
 
-![Overview dashboard](tableau/screenshots/01_overview.png)
+## Architecture
+
+```
+Sources ──> Python ingestion ──> PostgreSQL ──> dbt ──> reporting extracts ──> Tableau Public
+(World Bank,   (retries, pre-load    (raw JSONB,    (staging, intermediate,
+ IMF, UN WPP,   validation,           raw_synthetic,  star-schema marts,
+ Findex)        idempotent upsert)    audit)          SCD2 snapshot, tests)
+        Airflow orchestrates every step daily; a data quality report scores each run.
+```
+
+- Full diagram and design table: [`docs/architecture/system_overview.md`](docs/architecture/system_overview.md)
+- Warehouse model: [`docs/architecture/warehouse_erd.md`](docs/architecture/warehouse_erd.md)
+- dbt lineage: [`docs/architecture/dbt_lineage.png`](docs/architecture/dbt_lineage.png)
+
+## Engineering highlights
+
+- **Idempotent, incremental ingestion.** Every load is an upsert that rewrites a row only
+  when its hash changes. Each source detects change its own way: row hashes (World Bank),
+  release detection (IMF WEO), file checksums (UN WPP, Findex), and a settings fingerprint
+  (synthetic). Re-running the pipeline is always safe.
+- **Validation before loading.** Duplicate keys, aggregate codes posing as countries, row-count
+  drops, out-of-range years and coverage gaps are checked before anything is written. Errors
+  block the load; every result is stored in `audit.validation_results`.
+- **Kimball star schema in dbt.** Conformed dimensions, role-playing and degenerate dimensions,
+  an unknown member, incremental facts with stale-row cleanup, and an SCD2 snapshot of
+  World Bank income groups.
+- **Discovery before modelling.** Fifty documented findings (for example: aggregates mixed into
+  country lists, Namibia's code `NA` read as a null by pandas, UN counts in thousands, unlabelled
+  IMF projections) each drive a rule in code. See [`docs/discovery/`](docs/discovery/).
+- **Defence in depth on data quality.** The loyalty rule *points earned - points redeemed = points
+  held* is checked in Python before loading, in dbt after transformation, and in Tableau in the
+  final report. The dbt test caught a real generator bug, fixed in generator v2.
+- **One quality status per run.** Ingestion, validation, dbt tests, source freshness and coverage
+  combine into GREEN / AMBER / RED, stored in `audit.dq_reports`.
+- **Resilient orchestration.** Two layers of retries (HTTP backoff of 2, 4, 8 and 16 s inside a
+  task; Airflow retries after 10 then 20 minutes), alerts only after the final retry, and a
+  quality report that runs even when upstream tasks fail.
+- **Security.** Least-privilege PostgreSQL roles (app, dbt, read-only), SCRAM authentication,
+  secrets only in environment variables, never in Git.
+- **Calibrated synthetic data.** Deterministic (fixed seed), calibrated to real population,
+  income and Findex statistics, guarded by invariant checks, and validated in the dashboards
+  against the generator's own settings.
+
+## Tech stack
+
+Python 3.12 (requests, tenacity, pandas, SQLAlchemy, pydantic) · PostgreSQL 16 · dbt Core 1.11 ·
+Apache Airflow 3 · Tableau Public · pytest · ruff · GitHub Actions. Runs natively on macOS
+(no Docker), including a 2015 Intel MacBook.
+
+## Data sources
+
+| Source | Content | Licence |
+|---|---|---|
+| World Bank API (WDI) | Income, internet, mobile, broadband, urbanisation | CC BY 4.0 |
+| IMF World Economic Outlook | GDP growth and inflation, including projections | IMF terms of use |
+| UN World Population Prospects | Population and demography | CC BY 3.0 IGO |
+| Global Findex Database 2025 | Account ownership, mobile money, borrowing | CC BY 4.0 |
+
+Details and lineage: [`docs/source_catalogue.md`](docs/source_catalogue.md)
+
+## Quick start (macOS, no Docker)
+
+Prerequisites: Python 3.12, PostgreSQL 16 (for example Postgres.app), Git.
+
+```bash
+git clone git@github.com:maolyd/afripulse.git && cd afripulse
+python3.12 -m venv .venv && source .venv/bin/activate
+python -m pip install -e ".[dev,transform]"
+cp .env.example .env        # then fill in your own database credentials
+make db-setup               # database, roles, schemas and raw tables
+make pipeline               # ingest, freshness check, dbt build, quality report
+make export-tableau         # CSV extracts for Tableau in exports/tableau/
+```
+
+UN WPP and Global Findex are manual downloads; `config/sources.yml` names the files and pages.
+Run `make help` to list every command.
+
+**Orchestration (optional):** `make airflow-install`, `make airflow-init`, then `make airflow-start`
+(UI on http://localhost:8080).
+
+## Documentation
+
+| Topic | Document |
+|---|---|
+| Source discovery findings | [`docs/discovery/`](docs/discovery/) |
+| Source-to-target mapping | [`docs/source_to_target_mapping.md`](docs/source_to_target_mapping.md) |
+| Data dictionary | [`docs/data_dictionary.md`](docs/data_dictionary.md) |
+| Synthetic data design | [`docs/synthetic_data.md`](docs/synthetic_data.md) |
+| Data reliability and runbook | [`docs/data_reliability.md`](docs/data_reliability.md) |
+| Dashboard specifications | [`docs/dashboards.md`](docs/dashboards.md) |
+| Architecture decisions | [`docs/adr/`](docs/adr/) |
+
+## Project phases
+
+| Phase | Content | Tag |
+|---|---|---|
+| 1–2 | Setup, source discovery | |
+| 3 | Ingestion and validation | v0.3.0 |
+| 4 | Synthetic data | v0.4.0 |
+| 5 | dbt warehouse | v0.5.0 |
+| 6–7 | Airflow orchestration, data quality reporting | |
+| 8 | Tableau Public dashboards | v0.8.0 |
+| 9 | Portfolio and CI | v1.0.0 |
