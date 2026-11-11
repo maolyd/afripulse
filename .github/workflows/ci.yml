@@ -1,0 +1,41 @@
+# Continuous integration: on every push and pull request, install AfriPulse on a
+# fresh Linux machine, then run the linter and the unit tests (no database needed).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Settings() requires these to exist. Dummy values: unit tests never connect
+      # to a database, and no real credential is ever stored in GitHub.
+      AFRIPULSE_DB_USER: ci_dummy_user
+      AFRIPULSE_DB_PASSWORD: ci_dummy_password_not_a_secret
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install AfriPulse with development tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: python -m ruff check .
+
+      - name: Unit tests
+        run: python -m pytest -q -m "not integration"
