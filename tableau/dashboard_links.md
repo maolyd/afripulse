@@ -25,6 +25,9 @@
 - **Screenshot:** [screenshots/03_mobile_internet_adoption.png](screenshots/03_mobile_internet_adoption.png)
 - **Data:** `real_country_year.csv` (REAL)
 - **Findings:**
+    - Coverage: mobile subscriptions for 2024 come from 39 of 54 countries (publication lag, F15);
+    the data quality report flags this as AMBER. The 2024 value is population-weighted over
+    reporting countries only.
   - 2005 to 2024 (population-weighted): mobile subscriptions 15 → 96 per 100, internet use 4% → 41%,
     fixed broadband 0 → about 3 per 100. Africa went online by mobile.
   - Largest gaps between mobile access and internet use: Zambia (83 points), Uganda (74), Burkina Faso (72).
