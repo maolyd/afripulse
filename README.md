@@ -1,4 +1,5 @@
 # AfriPulse
+[![CI](https://github.com/maolyd/afripulse/actions/workflows/ci.yml/badge.svg)](https://github.com/maolyd/afripulse/actions/workflows/ci.yml)
 
 **An African Digital Economy and Consumer Intelligence Data Platform.**
 
