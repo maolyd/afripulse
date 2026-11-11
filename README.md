@@ -122,6 +122,8 @@ Run `make help` to list every command.
 | Data reliability and runbook | [`docs/data_reliability.md`](docs/data_reliability.md) |
 | Dashboard specifications | [`docs/dashboards.md`](docs/dashboards.md) |
 | Architecture decisions | [`docs/adr/`](docs/adr/) |
+| Challenges and solutions | [`docs/challenges_and_solutions.md`](docs/challenges_and_solutions.md) |
+| Interview demo guide | [`docs/demo_guide.md`](docs/demo_guide.md) |
 
 ## Project phases
 
