@@ -6,7 +6,16 @@ with values_default as (
 
     select country_iso3, year, indicator_code, value
     from {{ ref('int_indicator_values_compared') }}
-    where is_default_source and not is_projection and year >= 2000
+    where is_default_source
+      and year >= 2000
+      -- Actuals only, EXCEPT UN demographic values up to the current year: WPP 2024
+      -- labels 2024+ as projections, but they are the official current estimates
+      -- (the World Bank publishes the same numbers, F-UN-2). Without them, 2024
+      -- has no population and population-weighted averages break.
+      and (
+          not is_projection
+          or (source_id = 'un_wpp' and year <= extract(year from current_date)::integer)
+      )
 
 ),
 

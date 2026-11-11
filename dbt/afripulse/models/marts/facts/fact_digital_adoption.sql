@@ -7,7 +7,13 @@ with default_actuals as (
 
     select country_iso3, year, indicator_code, value
     from {{ ref('int_indicator_values_compared') }}
-    where is_default_source and not is_projection
+    where is_default_source
+      -- Actuals only, except UN demographic estimates up to the current year
+      -- (WPP 2024 labels 2024+ as projections; see rpt_country_year).
+      and (
+          not is_projection
+          or (source_id = 'un_wpp' and year <= extract(year from current_date)::integer)
+      )
 
 ),
 
