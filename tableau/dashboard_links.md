@@ -63,3 +63,18 @@
   211,037 purchases explained by customer sign-up dates (expected about 209,000).
 - **Modelling note:** the real Findex mobile money share sets both wallet ownership and usage
   frequency, so country differences are amplified (Tanzania: 53% real adoption, 22% of synthetic sales).
+
+  ## 6. Customer Loyalty Analytics (SYNTHETIC)
+
+- **Link:** (https://public.tableau.com/views/AfriPulseAfricanDigitalEconomyOverview/CustomerLoyalty?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)
+- **Screenshot:** [screenshots/06_customer_loyalty.png](screenshots/06_customer_loyalty.png)
+- **Data:** `SYNTHETIC_loyalty_customers.csv` (SYNTHETIC, banner on the dashboard)
+- **KPIs:** 2,986 members, 21,703,438 points earned, 73.3% redemption rate, 26.7% breakage,
+  5,797,938 outstanding points, $728.74 spend per member.
+- **Reconciliation:** points earned - redeemed - held = 0, the same rule checked in Python
+  (`invariants.py`) and dbt (`assert_loyalty_balances_reconcile`).
+- **Engagement:** 2,775 active, 206 lapsing, 5 dormant; spend per member falls from $733 (active)
+  to $563 (dormant).
+- **Known limitation:** Egypt and Ghana out-spend South Africa per member because each country's
+  small random merchant pool drives basket size as much as income does. A future generator version
+  could stratify merchant categories by country.
