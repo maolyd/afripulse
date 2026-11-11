@@ -50,3 +50,16 @@
     evidence the generator's calibration works.
 - **Data check:** the failure rate is 1.6%, not the configured 2%, because purchase-linked merchant
   payments never fail (`generators.py`, line 338): a deliberate consistency rule.
+
+  ## 5. Retail & Consumer Transactions (SYNTHETIC)
+
+- **Link:** https://public.tableau.com/views/AfriPulseAfricanDigitalEconomyOverview/RetailConsumer?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link
+- **Screenshot:** [screenshots/05_retail_consumer.png](screenshots/05_retail_consumer.png)
+- **Data:** `SYNTHETIC_retail_transactions.csv` (SYNTHETIC, banner on the dashboard)
+- **KPIs:** $3,663,091 sales, 211,037 purchases, $17 average basket, DIGITAL-SHARE% digital payments,
+  +31% month-end uplift.
+- **Validated against the generator code:** month-end uplift 31% (code: x1.3); Saturday 16.5-17.2%
+  of each age band's sales (expected 17.0%), Sunday 11.6-12.9% (expected 12.1%); December peaks;
+  211,037 purchases explained by customer sign-up dates (expected about 209,000).
+- **Modelling note:** the real Findex mobile money share sets both wallet ownership and usage
+  frequency, so country differences are amplified (Tanzania: 53% real adoption, 22% of synthetic sales).
